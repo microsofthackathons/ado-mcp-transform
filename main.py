@@ -24,7 +24,7 @@ proxy = FastMCP.as_proxy(config, name="ADO MCP Proxy")
 
 async def custom_output(**kwargs) -> ToolResult:
     result = await forward(**kwargs)
-    return ToolResult(structured_content={"Foo": "Bar"})  # Custom output structure
+    return ToolResult(structured_content={"Foo": "Bar", "original": result.content})  # Custom output structure
 
 async def main():
     """Setup the proxy and configure tools"""
