@@ -33,7 +33,8 @@ proxy = FastMCP.as_proxy(config, name="ADO MCP Proxy")
 # Tool transformations configuration
 TOOL_TRANSFORMATIONS = {
     "repo_get_repo_by_name_or_id": '{"id", "name", "defaultBranch", "remoteUrl"}',
-    "repo_get_pull_request_by_id": 'walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href)$") | not)) else . end)'
+    "repo_get_pull_request_by_id": 'walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href)$") | not)) else . end)',
+    "repo_list_pull_request_threads": 'map(select((."properties" | has("Microsoft.TeamFoundation.Discussion.UniqueID")) and .isDeleted == false)) | map(del(.properties) | walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href|.*Date|descriptor)$") | not)) else . end))'
 }
 
 # Pre-compile jq filters for performance
@@ -53,6 +54,10 @@ def create_custom_output(jq_command):
             try:
                 parsed = json.loads(result.content[0].text)
                 filtered = jq_command.input_value(parsed).first()
+
+                if filtered is not None and not isinstance(filtered, dict):
+                    filtered = {"result": filtered}
+                
                 return ToolResult(structured_content=filtered)
             except Exception:
                 pass
