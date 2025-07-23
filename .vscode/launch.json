@@ -5,13 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "FastMCP with Inspector",
+            "name": "Debug FastMCP (with SSE)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
-            "env": {
-                "MCP_TRANSPORT": "sse",
-            },
+            "args": ["--transport", "sse"],
             "console": "integratedTerminal"
         }
     ]

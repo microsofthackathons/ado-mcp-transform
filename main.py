@@ -11,12 +11,12 @@ from fastmcp.tools.tool import Tool, ToolResult
 from fastmcp.tools.tool_transform import forward
 from mcp.types import TextContent
 import asyncio
-import os
 import json
 import jq
+import argparse
 
 
-    # Create a proxy directly from a config dictionary
+# Create a proxy directly from a config dictionary
 config = {
     "mcpServers": {
         "default": {  # For single server configs, 'default' is commonly used
@@ -89,7 +89,14 @@ async def main(transport: Literal["stdio", "sse"] = "stdio"):
 
 # Run the server with stdio transport for local access
 if __name__ == "__main__":
-    transport = os.environ.get("MCP_TRANSPORT", "stdio")
-    if transport not in ("stdio", "sse"):
-        transport = "stdio"
-    asyncio.run(main(transport))  # Setup the proxy and tools
+    parser = argparse.ArgumentParser(description="Azure DevOps MCP Transform Proxy Server")
+    parser.add_argument(
+        "--transport", 
+        choices=["stdio", "sse"], 
+        default="stdio",
+        help="Transport protocol to use (default: stdio)"
+    )
+    
+    args = parser.parse_args()
+
+    asyncio.run(main(args.transport))  # Setup the proxy and tools

@@ -28,7 +28,11 @@ This project implements an MCP proxy that wraps the official Azure DevOps MCP se
 The `main.py` file uses script dependencies and can be executed directly:
 
 ```bash
+# Run with default stdio transport
 uv run main.py
+
+# Run with specific transport
+uv run main.py --transport sse
 ```
 
 ### Development Setup (This Repository)
@@ -44,6 +48,8 @@ uv sync
 
 # Run in development mode
 python main.py
+
+python main.py --transport sse
 ```
 
 Use the SSE server launch settings provided by `launch.json` for debugging in VS Code.
@@ -85,9 +91,10 @@ It is helpful to use an LLM and/or the jq playground for developing the expressi
 ## Transport Support
 
 - **stdio** (default) - Standard input/output for local MCP clients
-- **sse** - Server-Sent Events for debugging.
+- **sse** - Server-Sent Events for debugging
 
-Set via `MCP_TRANSPORT` environment variable.
+Transport can be configured via:
+1. Command line flag: `--transport stdio` or `--transport sse`
 
 ## Future Work
 
