@@ -1,6 +1,7 @@
 # /// script
 # dependencies = [
 #   "fastmcp",
+#   "jq"
 # ]
 # ///
 
@@ -12,6 +13,7 @@ from mcp.types import TextContent
 import asyncio
 import os
 import json
+import jq
 
 
     # Create a proxy directly from a config dictionary
@@ -36,7 +38,9 @@ async def custom_output(**kwargs) -> ToolResult:
     ):
         try:
             parsed = json.loads(result.content[0].text)
-            return ToolResult(structured_content=parsed)
+            jq_command = '{"id", "name", "defaultBranch", "remoteUrl" }'
+            filtered = jq.compile(jq_command).input_value(parsed).first()
+            return ToolResult(structured_content=filtered)
         except Exception:
             pass
     return result
