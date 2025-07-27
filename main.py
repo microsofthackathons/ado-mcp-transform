@@ -34,7 +34,6 @@ proxy = FastMCP.as_proxy(config, name="ADO MCP Proxy")
 TOOL_TRANSFORMATIONS = {
     "repo_get_repo_by_name_or_id": '{"id", "name", "defaultBranch", "remoteUrl"}',
     "repo_get_pull_request_by_id": 'walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href)$") | not)) else . end)',
-    "repo_list_pull_request_threads": 'map(select((."properties" | has("Microsoft.TeamFoundation.Discussion.UniqueID")) and .isDeleted == false)) | map(del(.properties) | walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href|.*Date|descriptor)$") | not)) else . end))',
     "*": 'walk(if type == "object" then with_entries(select(.key | IN("_links", "url", "href") | not)) else . end)',
 }
 
