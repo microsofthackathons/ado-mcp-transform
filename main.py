@@ -22,29 +22,31 @@ config = {
         "default": {  # For single server configs, 'default' is commonly used
             "command": "npx",
             "args": ["-y", "@azure-devops/mcp", "msazure"],    
-            "timeout": 30000
+            "timeout": 30000,
+            "tools": {
+                "repo_get_repo_by_name_or_id": {
+                    "meta": {
+                        "jq_response_transform": '{"id", "name", "defaultBranch", "remoteUrl"}'
+                    }
+                },
+                "repo_get_pull_request_by_id": {
+                    "meta": {
+                        "jq_response_transform": 'walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href)$") | not)) else . end)'
+                    }
+                }
+            },
         }
-    }
+    },
+    "default_jq_response_transform": 'walk(if type == "object" then with_entries(select(.key | IN("_links", "url", "href") | not)) else . end)',
 }
 
 # Create a proxy to the configured server (auto-creates ProxyClient)
-proxy = FastMCP.as_proxy(config, name="ADO MCP Proxy")
-
-# Tool transformations configuration
-TOOL_TRANSFORMATIONS = {
-    "repo_get_repo_by_name_or_id": '{"id", "name", "defaultBranch", "remoteUrl"}',
-    "repo_get_pull_request_by_id": 'walk(if type == "object" then with_entries(select(.key | test("^(_links|.*[Uu]rl|href)$") | not)) else . end)',
-    "*": 'walk(if type == "object" then with_entries(select(.key | IN("_links", "url", "href") | not)) else . end)',
-}
-
-# Pre-compile jq filters for performance
-COMPILED_TRANSFORMATIONS = {
-    tool_name: jq.compile(jq_string) 
-    for tool_name, jq_string in TOOL_TRANSFORMATIONS.items()
-}
+proxy = FastMCP.as_proxy(config, name="Jq Transform Proxy")
 
 def create_custom_output(jq_command):
-    """Higher-order function that takes a jq_command and returns the transformation function"""
+    compiled_jq = jq.compile(jq_command)
+
+    """Higher-order function that takes compiled jq and returns the transformation function"""
     async def custom_output(**kwargs) -> ToolResult:
         result = await forward(**kwargs)
         if (
@@ -53,7 +55,7 @@ def create_custom_output(jq_command):
         ):
             try:
                 parsed = json.loads(result.content[0].text)
-                filtered = jq_command.input_value(parsed).first()
+                filtered = compiled_jq.input_value(parsed).first()
 
                 if filtered is not None and not isinstance(filtered, dict):
                     filtered = {"result": filtered}
@@ -70,13 +72,15 @@ async def main(transport: Literal["stdio", "sse"] = "stdio"):
     # Get all available tools from proxy
     available_tools = await proxy.get_tools()
 
-    for tool_name, tool in available_tools.items():
-        compiled_jq = COMPILED_TRANSFORMATIONS.get(tool_name) or COMPILED_TRANSFORMATIONS.get("*")
-
+    for tool in available_tools.values():
+        jq_command = (tool.meta or {}).get('jq_response_transform') or config.get('default_jq_response_transform')
+        if not jq_command:
+            continue
+        
         copied_tool = tool.copy()  # Copy original tool to modify
-            
+        
         # Create transformation function for this tool
-        custom_output = create_custom_output(compiled_jq)
+        custom_output = create_custom_output(jq_command)
         
         # Create modified tool with transformation
         modified_tool = Tool.from_tool(copied_tool, transform_fn=custom_output)
